@@ -10,18 +10,37 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// func getRealDataHandler(w http.ResponseWriter, r *http.Request) {
+var cloudAgent sdk.Agent
 
-// 	s, _ := ioutil.ReadAll(r.Body) //把  body 内容读入字符串 s
-// 	//fmt.Println(string(s))
-// 	response := realdata.GetRealData(s)
-// 	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
-// 	w.WriteHeader(http.StatusOK)
-// 	w.Write(response)
-// }
-// func getHistoryDataHandler(c pb.DataServiceClient, w http.ResponseWriter, r *http.Request) {
+func getRealDataHandler(w http.ResponseWriter, r *http.Request) {
 
-// }
+	s, _ := ioutil.ReadAll(r.Body) //把  body 内容读入字符串 s
+	// bearerToken := r.Header.Get("Authorization")
+	// splitToken := strings.Split(bearerToken, "Bearer")
+	// // fmt.Println(string(s))
+	// // fmt.Println(splitToken[1])
+	// bearerToken = splitToken[1]
+	// options := &sdk.DataStoreOptions{
+	// 	URL:         "https://portal-scada-develop.wise-paas.com",
+	// 	AccessToken: bearerToken,
+	// }
+	req := realDataReqDataFormat(s)
+	response := cloudAgent.GetRealData(req)
+	jsondata, _ := json.Marshal(response)
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsondata)
+}
+func getHisDataHandler(w http.ResponseWriter, r *http.Request) {
+	s, _ := ioutil.ReadAll(r.Body) //把  body 内容读入字符串 s
+	var hisRawDataTags sdk.HistRawDataRequest
+	json.Unmarshal(s, &hisRawDataTags)
+	response := cloudAgent.GetHistoryData(hisRawDataTags)
+	jsondata, _ := json.Marshal(response)
+	w.Header().Set("Content-Type", "application/json;charset=UTF-8")
+	w.WriteHeader(http.StatusOK)
+	w.Write(jsondata)
+}
 func realDataReqDataFormat(req []byte) sdk.RealDataReq {
 	var realTags sdk.RealDataReq
 	json.Unmarshal(req, &realTags)
@@ -33,27 +52,9 @@ func main() {
 		URL:         "https://portal-scada-develop.wise-paas.com",
 		AccessToken: "YRI27pfMH1HItc3Yk4MqdcExhQlSjg",
 	}
-	cloudAgent := sdk.DataStore(options)
-	r.HandleFunc("/api/query/realdata", func(w http.ResponseWriter, r *http.Request) {
-
-		s, _ := ioutil.ReadAll(r.Body) //把  body 内容读入字符串 s
-		// bearerToken := r.Header.Get("Authorization")
-		// splitToken := strings.Split(bearerToken, "Bearer")
-		// // fmt.Println(string(s))
-		// // fmt.Println(splitToken[1])
-		// bearerToken = splitToken[1]
-		// options := &sdk.DataStoreOptions{
-		// 	URL:         "https://portal-scada-develop.wise-paas.com",
-		// 	AccessToken: bearerToken,
-		// }
-		req := realDataReqDataFormat(s)
-		response := cloudAgent.GetRealData(req)
-		jsondata, _ := json.Marshal(response)
-		//response := realdata.GetRealData(s, c)
-		w.Header().Set("Content-Type", "application/json;charset=UTF-8")
-		w.WriteHeader(http.StatusOK)
-		w.Write(jsondata)
-	}).Methods("POST")
+	cloudAgent = sdk.DataStore(options)
+	r.HandleFunc("/api/RealData/raw", getRealDataHandler).Methods("POST")
+	r.HandleFunc("/api/HistData/raw", getHisDataHandler).Methods("POST")
 
 	log.Fatal(http.ListenAndServe(":8000", r))
 }
